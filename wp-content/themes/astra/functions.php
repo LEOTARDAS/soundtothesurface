@@ -204,3 +204,185 @@ require_once ASTRA_THEME_DIR . 'inc/core/markup/class-astra-markup.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-filters.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-hooks.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-functions.php';
+
+
+//** Pridėjimas Sample (Fragmento) įrašų tipą
+function create_sample_post_type() {
+
+    $labels = array(
+        'name' => _x('Samples', 'Post Type General Name', 'textdomain'),
+        'singular_name' => _x('Sample', 'Post Type Singular Name', 'textdomain'),
+        'menu_name' => __('Samples', 'textdomain'),
+        'name_admin_bar' => __('Sample', 'textdomain'),
+        'add_new_item' => __('Add New Sample', 'textdomain'),
+        'edit_item' => __('Edit Sample', 'textdomain'),
+        'new_item' => __('New Sample', 'textdomain'),
+        'view_item' => __('View Sample', 'textdomain'),
+        'all_items' => __('All Samples', 'textdomain'),
+    );
+
+    $args = array(
+        'labels' => $labels,
+        'public' => true,
+        'has_archive' => true,
+        'rewrite' => array('slug' => 'samples'),
+        'supports' => array('title', 'editor', 'thumbnail', 'author', 'custom-fields', 'comments'),
+        'menu_icon' => 'dashicons-format-audio',
+        'show_in_rest' => true,
+        'capability_type' => 'post',
+    );
+
+    register_post_type('sample', $args);
+
+	function add_sample_meta_boxes() {
+		add_meta_box(
+			'sample_audio_file',             // Meta box ID
+			'Muzikos failas',                 // Meta box pavadinimas
+			'render_sample_audio_file_box',   // Funkcija, kuri atvaizduos turinį
+			'sample',                         // Post tipo pavadinimas (mūsų CPT)
+			'normal',                         // Rodymo vieta
+			'default'                         // Prioritetas
+		);
+	}
+	add_action('add_meta_boxes', 'add_sample_meta_boxes');
+	
+	// Meta box formos turinys
+	function render_sample_audio_file_box($post) {
+		// Paimam saugotą reikšmę, jei jau yra
+		$audio_file_url = get_post_meta($post->ID, '_sample_audio_file', true);
+	
+		// HTML laukas
+		echo '<label for="sample_audio_file">Audio failo URL:</label><br>';
+		echo '<input type="text" id="sample_audio_file" name="sample_audio_file" value="' . esc_attr($audio_file_url) . '" size="80" />';
+		echo '<p>Įrašyk pilną URL į failą (arba įkelk per Media Library ir įklijuok nuorodą).</p>';
+	}
+	
+	// Išsaugoti meta box duomenis
+	function save_sample_audio_file($post_id) {
+		// Ar tai automatinis saugojimas?
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+	
+		// Ar vartotojas turi teisę redaguoti įrašą?
+		if (!current_user_can('edit_post', $post_id)) return;
+	
+		// Ar yra įrašytas laukelis?
+		if (isset($_POST['sample_audio_file'])) {
+			update_post_meta($post_id, '_sample_audio_file', sanitize_text_field($_POST['sample_audio_file']));
+		}
+	}
+	add_action('save_post', 'save_sample_audio_file');
+
+// Ajax funkcija su galimybe perbalsuoti
+function save_sample_rating() {
+    $post_id = intval($_POST['post_id']);
+    $rating = intval($_POST['rating']);
+    $user_id = get_current_user_id();
+
+    if ($post_id && $rating >= 1 && $rating <= 5 && $user_id) {
+        $rated_users = get_post_meta($post_id, '_sample_rated_users', true);
+
+        if (!is_array($rated_users)) {
+            $rated_users = array();
+        }
+
+        $current_rating = get_post_meta($post_id, '_sample_rating', true);
+        $current_votes = get_post_meta($post_id, '_sample_votes', true);
+
+        if (isset($rated_users[$user_id])) {
+            // Vartotojas jau balsavo anksčiau - atnaujinam vertinimą
+
+            // Pirmiausia atimam seną reitingą
+            $current_rating -= intval($rated_users[$user_id]);
+
+            // Paskui pridedam naują
+            $current_rating += $rating;
+
+            $rated_users[$user_id] = $rating; // Atnaujinam jo vertinimą
+
+        } else {
+            // Pirmas balsavimas
+            $current_rating += $rating;
+            $current_votes += 1;
+            $rated_users[$user_id] = $rating;
+        }
+
+        update_post_meta($post_id, '_sample_rating', $current_rating);
+        update_post_meta($post_id, '_sample_votes', $current_votes);
+        update_post_meta($post_id, '_sample_rated_users', $rated_users);
+
+        echo 'Ačiū už įvertinimą!';
+    }
+
+    wp_die();
+}
+add_action('wp_ajax_save_sample_rating', 'save_sample_rating');
+add_action('wp_ajax_nopriv_save_sample_rating', 'save_sample_rating');
+
+function enqueue_sample_rating_styles() {
+    if (is_singular('sample')) { // Tik kai atidarytas Sample įrašas
+        wp_enqueue_style('sample-rating-css', get_template_directory_uri() . '/css/sample-rating.css');
+    }
+}
+add_action('wp_enqueue_scripts', 'enqueue_sample_rating_styles');
+
+}
+add_action('init', 'create_sample_post_type');
+
+// Pridėti rating lauką prie komentarų formos
+function add_rating_to_comment_form() {
+    echo '<p class="comment-form-rating">
+        <label for="rating">Įvertinimas (žvaigždutėmis) <span class="required">*</span></label>
+        <select name="rating" id="rating" required>
+            <option value="">Pasirinkite įvertinimą</option>
+            <option value="5">★★★★★ - Puiku</option>
+            <option value="4">★★★★☆ - Labai gerai</option>
+            <option value="3">★★★☆☆ - Gerai</option>
+            <option value="2">★★☆☆☆ - Vidutiniškai</option>
+            <option value="1">★☆☆☆☆ - Prastai</option>
+        </select>
+    </p>';
+}
+add_action('comment_form_logged_in_after', 'add_rating_to_comment_form');
+add_action('comment_form_after_fields', 'add_rating_to_comment_form');
+
+// Išsaugoti rating kai komentaras sukuriamas
+function save_comment_rating($comment_id) {
+    if (isset($_POST['rating']) && $_POST['rating'] != '') {
+        $rating = intval($_POST['rating']);
+        add_comment_meta($comment_id, 'rating', $rating);
+    }
+}
+add_action('comment_post', 'save_comment_rating');
+
+// Rodyti komentarą su žvaigždutėmis
+function custom_comment_display($comment, $args, $depth) {
+    $GLOBALS['comment'] = $comment;
+    ?>
+    <li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
+        <div id="comment-<?php comment_ID(); ?>" style="margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <div class="comment-author vcard" style="margin-bottom: 10px;">
+                <?php echo get_avatar($comment, 40); ?>
+                <strong><?php comment_author_link(); ?></strong>
+            </div>
+
+            <div class="comment-meta commentmetadata" style="margin-bottom: 10px; color: #777;">
+                <?php
+                $rating = get_comment_meta(get_comment_ID(), 'rating', true);
+                if ($rating) {
+                    echo '<div class="comment-rating" style="font-size: 20px; color: gold; margin-bottom: 10px;">';
+                    for ($i = 1; $i <= 5; $i++) {
+                        echo ($i <= $rating) ? '★' : '☆';
+                    }
+                    echo '</div>';
+                }
+                ?>
+                <small><?php comment_date(); ?> <?php comment_time(); ?></small>
+            </div>
+
+            <div class="comment-text">
+                <?php comment_text(); ?>
+            </div>
+        </div>
+    </li>
+    <?php
+}
