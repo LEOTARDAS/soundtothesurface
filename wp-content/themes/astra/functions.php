@@ -205,6 +205,10 @@ require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-filters.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-hooks.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-functions.php';
 
+function astra_child_enqueue_styles() {
+    wp_enqueue_style('astra-style', get_stylesheet_uri());
+}
+add_action('wp_enqueue_scripts', 'astra_child_enqueue_styles');
 
 //** Pridėjimas Sample (Fragmento) įrašų tipą
 function create_sample_post_type() {
@@ -486,3 +490,111 @@ function increment_sample_downloads() {
     }
     wp_die();
 }
+
+function render_profile_edit_form() {
+    if (!is_user_logged_in()) {
+        return '<p>Turite būti prisijungęs, kad galėtumėte redaguoti savo profilį.</p>';
+    }
+
+    $user_id = get_current_user_id();
+    $user_info = get_userdata($user_id);
+
+    ob_start();
+    ?>
+    <form id="profile-edit-form" method="post" enctype="multipart/form-data" style="max-width:500px; margin: 20px auto; background: #f7f7f7; padding: 30px; border-radius: 10px;">
+        <h2>Redaguoti profilį</h2>
+
+        <p>
+            <label>Vardas</label><br>
+            <input type="text" name="first_name" value="<?php echo esc_attr($user_info->first_name); ?>">
+        </p>
+
+        <p>
+            <label>Pavardė</label><br>
+            <input type="text" name="last_name" value="<?php echo esc_attr($user_info->last_name); ?>">
+        </p>
+
+        <p>
+            <label>Aprašymas apie save</label><br>
+            <textarea name="description" rows="5"><?php echo esc_attr(get_the_author_meta('description', $user_id)); ?></textarea>
+        </p>
+
+        <p>
+            <label>Profilio nuotrauka (avataras)</label><br>
+            <input type="file" name="profile_picture">
+        </p>
+
+        <p>
+            <input type="submit" name="update_profile" value="Išsaugoti" style="background: #0073aa; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor:pointer;">
+        </p>
+    </form>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('redaguoti_profili', 'render_profile_edit_form');
+
+// Apdoroti profilio redagavimo formą
+function handle_profile_edit_form() {
+    if (!is_user_logged_in() || !isset($_POST['update_profile'])) {
+        return;
+    }
+
+    $user_id = get_current_user_id();
+
+        // Atnaujinam tik jei pateiktas laukas ir jis ne tuščias
+        if (isset($_POST['first_name']) && $_POST['first_name'] !== '') {
+            update_user_meta($user_id, 'first_name', sanitize_text_field($_POST['first_name']));
+        }
+
+        if (isset($_POST['last_name'])) {
+            $last_name = sanitize_text_field($_POST['last_name']);
+            if ($last_name === '') {
+                delete_user_meta($user_id, 'last_name');
+            } else {
+                wp_update_user(array(
+                    'ID' => $user_id,
+                    'last_name' => $last_name
+                ));
+            }
+        }
+        
+
+        if (isset($_POST['description'])) {
+            $description = sanitize_text_field($_POST['description']);
+            if ($description === '') {
+                delete_user_meta($user_id, 'description');
+            } else {
+                update_user_meta($user_id, 'description', $description);
+            }
+        }
+
+
+    // Profilio nuotrauka
+    if (!empty($_FILES['profile_picture']['tmp_name'])) {
+        require_once(ABSPATH . 'wp-admin/includes/file.php');
+        require_once(ABSPATH . 'wp-admin/includes/image.php');
+
+        $file = $_FILES['profile_picture'];
+        $upload = wp_handle_upload($file, array('test_form' => false));
+
+        if (!isset($upload['error'])) {
+            $attachment = array(
+                'post_mime_type' => $upload['type'],
+                'post_title'     => sanitize_file_name($upload['file']),
+                'post_content'   => '',
+                'post_status'    => 'inherit'
+            );
+            $attachment_id = wp_insert_attachment($attachment, $upload['file']);
+            require_once(ABSPATH . 'wp-admin/includes/image.php');
+            $attach_data = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+            wp_update_attachment_metadata($attachment_id, $attach_data);
+
+            update_user_meta($user_id, 'profile_picture', $attachment_id);
+        }
+    }
+
+    wp_redirect(get_author_posts_url($user_id));
+    exit;
+
+}
+add_action('template_redirect', 'handle_profile_edit_form');

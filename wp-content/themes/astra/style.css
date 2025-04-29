@@ -1,4 +1,92 @@
-.sce-timer,
-.sce-seperator {
-    display: none !important;
+.profile-box {
+    background: #fff;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 30px;
+    max-width: 1200px;
+    width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.author-top {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.author-avatar {
+    border-radius: 50%;
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+}
+
+.author-name-edit h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.profile-edit-btn {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-decoration: none;
+    margin-top: 5px;
+}
+
+.profile-edit-btn:hover {
+    background: #222;
+}
+.sample-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: 60px;
+}
+
+.sample-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    justify-content: center;
+    margin-top: 20px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.author-samples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 25px;
+    justify-content: center;
+    margin-top: 20px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.sample-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    padding: 20px;
+    max-width: 320px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.sample-card img {
+    width: 300px;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.sample-item audio {
+    width: 100%;
+    margin-top: 10px;
 }
