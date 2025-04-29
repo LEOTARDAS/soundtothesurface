@@ -357,25 +357,23 @@ add_action('comment_post', 'save_comment_rating');
 // Rodyti komentarą su žvaigždutėmis
 function custom_comment_display($comment, $args, $depth) {
     $GLOBALS['comment'] = $comment;
+    $rating = get_comment_meta(get_comment_ID(), 'rating', true);
     ?>
-    <li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
-        <div id="comment-<?php comment_ID(); ?>" style="margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+    <li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>" data-rating="<?php echo esc_attr($rating); ?>">
+        <div id="comment-<?php comment_ID(); ?>" class="comment">
             <div class="comment-author vcard" style="margin-bottom: 10px;">
                 <?php echo get_avatar($comment, 40); ?>
                 <strong><?php comment_author_link(); ?></strong>
             </div>
 
             <div class="comment-meta commentmetadata" style="margin-bottom: 10px; color: #777;">
-                <?php
-                $rating = get_comment_meta(get_comment_ID(), 'rating', true);
-                if ($rating) {
-                    echo '<div class="comment-rating" style="font-size: 20px; color: gold; margin-bottom: 10px;">';
-                    for ($i = 1; $i <= 5; $i++) {
-                        echo ($i <= $rating) ? '★' : '☆';
-                    }
-                    echo '</div>';
-                }
-                ?>
+                <?php if ($rating): ?>
+                    <div class="comment-rating" style="font-size: 20px; color: gold; margin-bottom: 10px;">
+                        <?php for ($i = 1; $i <= 5; $i++) {
+                            echo ($i <= $rating) ? '★' : '☆';
+                        } ?>
+                    </div>
+                <?php endif; ?>
                 <small><?php comment_date(); ?> <?php comment_time(); ?></small>
             </div>
 
@@ -385,4 +383,106 @@ function custom_comment_display($comment, $args, $depth) {
         </div>
     </li>
     <?php
+}
+add_filter('simple_comment_editing_seconds', function() {
+    return 315360000; // kadangi įskiepis ima laiką kada galima redaguoti komentarą - padaryta 10 metų
+});
+
+add_action('wp_footer', function() { // papildomai laikmatis išjungtas
+    ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Paslepia laikmatį redagavimo lange
+            document.querySelectorAll('.sce-timer').forEach(el => el.remove());
+            document.querySelectorAll('.sce-seperator').forEach(el => el.remove());
+        });
+    </script>
+    <?php
+});
+
+add_action('wp_footer', function () {
+    if (!is_singular('sample')) return;
+
+    ?>
+    <script>
+    document.querySelectorAll('select[name="rating"]').forEach(function(select) {
+    const commentForm = select.closest('li.comment, .comment'); // Ieškome artimiausio komentaro
+    if (commentForm) {
+        const rating = commentForm.getAttribute('data-rating');
+        if (rating) {
+            select.value = rating;
+        }
+    }
+});
+    </script>
+    <?php
+});
+
+add_filter('comment_edit_pre', function($comment_content) {
+    if (is_admin()) return $comment_content;
+
+    $comment_id = get_comment_ID();
+    $rating = get_comment_meta($comment_id, 'rating', true);
+
+    if ($rating) {
+        // JavaScript pusėje surasime ir pažymėsime select laukelį
+        echo "<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var select = document.querySelector('select[name=rating]');
+            if (select) select.value = '" . esc_js($rating) . "';
+        });
+        </script>";
+    }
+
+    return $comment_content;
+});
+
+add_action('edit_comment', function($comment_id) {
+    if (isset($_POST['rating'])) {
+        update_comment_meta($comment_id, 'rating', intval($_POST['rating']));
+    }
+});
+
+// 1. Pridedam AJAX palaikymą žvaigždučių įrašymui, kai komentaras redaguojamas
+add_action('wp_ajax_sce_save_comment', function () {
+    $comment_id = intval($_POST['comment_ID']);
+    if (isset($_POST['rating'])) {
+        update_comment_meta($comment_id, 'rating', intval($_POST['rating']));
+    }
+});
+
+// 2. Įkeliam esamą žvaigždučių įvertinimą į redagavimo formą per JavaScript
+add_action('wp_footer', function () {
+    if (!is_singular('sample')) return;
+
+    ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Ieško visų komentarų
+        document.querySelectorAll('.comment').forEach(function(comment) {
+            const commentID = comment.id.replace('comment-', '');
+            const ratingEl = comment.querySelector('[data-rating]');
+            const select = comment.querySelector('select[name="rating"]');
+            if (ratingEl && select) {
+                select.value = ratingEl.dataset.rating;
+            }
+        });
+    });
+    </script>
+    <?php
+});
+
+// Padidinti parsisiuntimų skaičių per AJAX
+add_action('wp_ajax_sample_download', 'increment_sample_downloads');
+add_action('wp_ajax_nopriv_sample_download', 'increment_sample_downloads');
+
+function increment_sample_downloads() {
+    $post_id = intval($_POST['post_id']);
+    if ($post_id) {
+        $count = get_post_meta($post_id, '_sample_downloads', true);
+        $count = $count ? intval($count) + 1 : 1;
+        update_post_meta($post_id, '_sample_downloads', $count);
+        echo $count;
+    }
+    wp_die();
 }

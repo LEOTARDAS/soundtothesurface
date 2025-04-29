@@ -3,7 +3,10 @@ get_header();
 
 if (have_posts()) :
     while (have_posts()) : the_post();
-?>
+    
+    $download_count = get_post_meta(get_the_ID(), '_sample_downloads', true);
+    $download_count = $download_count ? $download_count : 0;
+    ?>
 <div class="sample-container">
     <div class="sample-left sample-fade-in delay-1">
         <div class="sample-image-placeholder">
@@ -37,35 +40,58 @@ if (have_posts()) :
             ?>
         </div>
         <?php if (!empty($audio_file_url)) : ?>
-            <div class="sample-download-block sample-fade-in delay-4">
-			<a href="<?php echo esc_url($audio_file_url); ?>" download class="download-button">
-    <img src="http://localhost:8080/soundtothesurface/wp-content/uploads/2025/04/download-icon.png" alt="Download" style="width: 20px; height: 20px;">
-    Download
-</a>
-            </div>
-        <?php endif; ?>
+    <div class="sample-download-block sample-fade-in delay-4">
+        <a href="<?php echo esc_url($audio_file_url); ?>"
+           download 
+           class="download-button"
+           onclick="registerDownload(<?php echo get_the_ID(); ?>)">
+            <img src="http://localhost:8080/soundtothesurface/wp-content/uploads/2025/04/download-icon.png" alt="Download" style="width: 20px; height: 20px;">
+            Download
+        </a>
+        <p id="download-count" style="margin-top:10px;">Atsisiuntimų skaičius: <strong><?php echo $download_count; ?></strong></p>
+    </div>
+<?php endif; ?>
 
         <div class="sample-rating-block sample-fade-in delay-4">
-            <h3>Įvertinkite fragmentą:</h3>
-            <?php
-            $current_rating = get_post_meta(get_the_ID(), '_sample_rating', true);
-            $current_votes = get_post_meta(get_the_ID(), '_sample_votes', true);
-            $average_rating = ($current_votes && $current_rating) ? round($current_rating / $current_votes, 1) : 'Nėra įvertinimų dar';
-            for ($i = 1; $i <= 5; $i++) {
-                echo '<span class="star" data-value="' . $i . '">&#9733;</span> ';
-            }
-            echo '<p style="margin-top:10px;">Vidutinis įvertinimas: <strong>' . $average_rating . '</strong></p>';
-            ?>
+    <h3>Fragmento įvertinimas:</h3>
+    <?php
+    // Gauti visų komentarų reitingus
+    $comments = get_comments(array(
+        'post_id' => get_the_ID(),
+        'status' => 'approve',
+    ));
+
+    $ratings = [];
+    foreach ($comments as $comment) {
+        $r = get_comment_meta($comment->comment_ID, 'rating', true);
+        if ($r) {
+            $ratings[] = intval($r);
+        }
+    }
+
+    if (count($ratings) > 0) {
+        $avg_rating = round(array_sum($ratings) / count($ratings), 1);
+        echo '<div style="font-size:24px; color:gold;">';
+        for ($i = 1; $i <= 5; $i++) {
+            echo ($i <= $avg_rating) ? '★' : '☆';
+        }
+        echo '</div>';
+        echo '<p style="margin-top: 5px;">Vidutinis įvertinimas: <strong>' . $avg_rating . '</strong></p>';
+    } else {
+        echo '<p>Dar nėra įvertinimų.</p>';
+    }
+    ?>
+</div>
 
 		<div class="sample-description sample-fade-in delay-2">
         	<?php the_content(); ?>
     	</div>
 		<?php
-// Rodyti komentarų formą
-if (comments_open() || get_comments_number()) {
-    comments_template();
-}
-?>
+			// Rodyti komentarų formą
+			if (comments_open() || get_comments_number()) {
+				comments_template();
+			}
+			?>
         </div>
     </div>
 </div>
@@ -162,6 +188,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function registerDownload(postID) {
+    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=sample_download&post_id=' + postID
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Atnaujinti skaičių DOM'e
+        const el = document.getElementById('download-count');
+        if (el) {
+            el.innerHTML = 'Atsisiuntimų skaičius: <strong>' + data + '</strong>';
+        }
+    });
+}
 </script>
 <?php
 

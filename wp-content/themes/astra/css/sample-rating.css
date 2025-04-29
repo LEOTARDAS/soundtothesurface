@@ -183,3 +183,32 @@
 .sample-fade-in.delay-4 {
     animation-delay: 0.8s;
 }
+.comment-rating {
+    font-size: 18px;
+    color: gold;
+    margin-bottom: 8px;
+}
+.comment-author {
+    font-weight: bold;
+}
+.comments-area {
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+}
+.simple-comment-edit-link {
+    display: inline-block;
+    margin-top: 10px;
+    background-color: #1a1a1a;
+    color: white;
+    padding: 6px 12px;
+    font-size: 14px;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 0.3s ease;
+}
+
+.simple-comment-edit-link:hover {
+    background-color: #cc0000;
+    color: #fff;
+}

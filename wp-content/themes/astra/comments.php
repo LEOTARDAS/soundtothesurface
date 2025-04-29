@@ -7,9 +7,7 @@ if (post_password_required()) {
 <div id="comments" class="comments-area">
 
     <?php if (have_comments()) : ?>
-        <h2 class="comments-title">
-            Atsiliepimai
-        </h2>
+        <h2 class="comments-title">Atsiliepimai</h2>
 
         <ol class="comment-list">
             <?php
@@ -39,8 +37,46 @@ if (post_password_required()) {
     <?php endif; ?>
 
     <?php
-    // Komentarų forma
-    comment_form();
-    ?>
+$user_id = get_current_user_id();
+$has_commented = false;
+
+if ($user_id) {
+    $existing_comments = get_comments([
+        'post_id' => get_the_ID(),
+        'user_id' => $user_id,
+        'count' => true,
+    ]);
+
+    if ($existing_comments > 0) {
+        $has_commented = true;
+    }
+}
+?>
+
+
+<?php
+$user_id = get_current_user_id();
+$has_commented = false;
+
+if ($user_id) {
+    $existing_comments = get_comments([
+        'post_id' => get_the_ID(),
+        'user_id' => $user_id,
+        'count' => true,
+    ]);
+
+    if ($existing_comments > 0) {
+        $has_commented = true;
+    }
+}
+?>
+
+<?php if (!$has_commented) : ?>
+    <?php comment_form(); ?>
+<?php else : ?>
+    <p class="already-commented" style="font-style: italic; color: #555;">
+        Jūs jau parašėte atsiliepimą prie šio fragmento.
+    </p>
+<?php endif; ?>
 
 </div><!-- #comments -->
