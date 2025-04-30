@@ -210,9 +210,34 @@ function astra_child_enqueue_styles() {
 }
 add_action('wp_enqueue_scripts', 'astra_child_enqueue_styles');
 
-//** Pridėjimas Sample (Fragmento) įrašų tipą
-function create_sample_post_type() {
+// 1. Registruojam žanrų taksonomiją (atskirai nuo CPT)
+function register_sample_genre_taxonomy() {
+    $labels = array(
+        'name'              => 'Žanrai',
+        'singular_name'     => 'Žanras',
+        'search_items'      => 'Ieškoti žanrų',
+        'all_items'         => 'Visi žanrai',
+        'edit_item'         => 'Redaguoti žanrą',
+        'update_item'       => 'Atnaujinti žanrą',
+        'add_new_item'      => 'Pridėti naują žanrą',
+        'new_item_name'     => 'Naujo žanro pavadinimas',
+        'menu_name'         => 'Žanrai',
+    );
 
+    register_taxonomy('sample_genre', 'sample', array(
+        'hierarchical'      => false,
+        'labels'            => $labels,
+        'show_ui'           => true,
+        'show_admin_column' => true,
+        'rewrite'           => array('slug' => 'genre'),
+        'show_in_rest'      => true,
+    ));
+}
+add_action('init', 'register_sample_genre_taxonomy');
+
+
+// 2. Registruojam įrašų tipą "sample"
+function create_sample_post_type() {
     $labels = array(
         'name' => _x('Samples', 'Post Type General Name', 'textdomain'),
         'singular_name' => _x('Sample', 'Post Type Singular Name', 'textdomain'),
@@ -233,50 +258,46 @@ function create_sample_post_type() {
         'supports' => array('title', 'editor', 'thumbnail', 'author', 'custom-fields', 'comments'),
         'menu_icon' => 'dashicons-format-audio',
         'show_in_rest' => true,
+        'taxonomies' => array('sample_genre'), // susiejam CPT su taksonomija
         'capability_type' => 'post',
     );
 
     register_post_type('sample', $args);
+}
+add_action('init', 'create_sample_post_type');
 
-	function add_sample_meta_boxes() {
-		add_meta_box(
-			'sample_audio_file',             // Meta box ID
-			'Muzikos failas',                 // Meta box pavadinimas
-			'render_sample_audio_file_box',   // Funkcija, kuri atvaizduos turinį
-			'sample',                         // Post tipo pavadinimas (mūsų CPT)
-			'normal',                         // Rodymo vieta
-			'default'                         // Prioritetas
-		);
-	}
-	add_action('add_meta_boxes', 'add_sample_meta_boxes');
-	
-	// Meta box formos turinys
-	function render_sample_audio_file_box($post) {
-		// Paimam saugotą reikšmę, jei jau yra
-		$audio_file_url = get_post_meta($post->ID, '_sample_audio_file', true);
-	
-		// HTML laukas
-		echo '<label for="sample_audio_file">Audio failo URL:</label><br>';
-		echo '<input type="text" id="sample_audio_file" name="sample_audio_file" value="' . esc_attr($audio_file_url) . '" size="80" />';
-		echo '<p>Įrašyk pilną URL į failą (arba įkelk per Media Library ir įklijuok nuorodą).</p>';
-	}
-	
-	// Išsaugoti meta box duomenis
-	function save_sample_audio_file($post_id) {
-		// Ar tai automatinis saugojimas?
-		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
-	
-		// Ar vartotojas turi teisę redaguoti įrašą?
-		if (!current_user_can('edit_post', $post_id)) return;
-	
-		// Ar yra įrašytas laukelis?
-		if (isset($_POST['sample_audio_file'])) {
-			update_post_meta($post_id, '_sample_audio_file', sanitize_text_field($_POST['sample_audio_file']));
-		}
-	}
-	add_action('save_post', 'save_sample_audio_file');
 
-// Ajax funkcija su galimybe perbalsuoti
+// 3. Meta box pridėjimas
+function add_sample_meta_boxes() {
+    add_meta_box(
+        'sample_audio_file',
+        'Muzikos failas',
+        'render_sample_audio_file_box',
+        'sample',
+        'normal',
+        'default'
+    );
+}
+add_action('add_meta_boxes', 'add_sample_meta_boxes');
+
+function render_sample_audio_file_box($post) {
+    $audio_file_url = get_post_meta($post->ID, '_sample_audio_file', true);
+    echo '<label for="sample_audio_file">Audio failo URL:</label><br>';
+    echo '<input type="text" id="sample_audio_file" name="sample_audio_file" value="' . esc_attr($audio_file_url) . '" size="80" />';
+    echo '<p>Įrašyk pilną URL į failą (arba įkelk per Media Library ir įklijuok nuorodą).</p>';
+}
+
+function save_sample_audio_file($post_id) {
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+    if (!current_user_can('edit_post', $post_id)) return;
+    if (isset($_POST['sample_audio_file'])) {
+        update_post_meta($post_id, '_sample_audio_file', sanitize_text_field($_POST['sample_audio_file']));
+    }
+}
+add_action('save_post', 'save_sample_audio_file');
+
+
+// 4. AJAX reitingų funkcija
 function save_sample_rating() {
     $post_id = intval($_POST['post_id']);
     $rating = intval($_POST['rating']);
@@ -284,7 +305,6 @@ function save_sample_rating() {
 
     if ($post_id && $rating >= 1 && $rating <= 5 && $user_id) {
         $rated_users = get_post_meta($post_id, '_sample_rated_users', true);
-
         if (!is_array($rated_users)) {
             $rated_users = array();
         }
@@ -293,18 +313,10 @@ function save_sample_rating() {
         $current_votes = get_post_meta($post_id, '_sample_votes', true);
 
         if (isset($rated_users[$user_id])) {
-            // Vartotojas jau balsavo anksčiau - atnaujinam vertinimą
-
-            // Pirmiausia atimam seną reitingą
             $current_rating -= intval($rated_users[$user_id]);
-
-            // Paskui pridedam naują
             $current_rating += $rating;
-
-            $rated_users[$user_id] = $rating; // Atnaujinam jo vertinimą
-
+            $rated_users[$user_id] = $rating;
         } else {
-            // Pirmas balsavimas
             $current_rating += $rating;
             $current_votes += 1;
             $rated_users[$user_id] = $rating;
@@ -322,15 +334,14 @@ function save_sample_rating() {
 add_action('wp_ajax_save_sample_rating', 'save_sample_rating');
 add_action('wp_ajax_nopriv_save_sample_rating', 'save_sample_rating');
 
+
+// 5. Stilių įkėlimas
 function enqueue_sample_rating_styles() {
-    if (is_singular('sample')) { // Tik kai atidarytas Sample įrašas
+    if (is_singular('sample')) {
         wp_enqueue_style('sample-rating-css', get_template_directory_uri() . '/css/sample-rating.css');
     }
 }
 add_action('wp_enqueue_scripts', 'enqueue_sample_rating_styles');
-
-}
-add_action('init', 'create_sample_post_type');
 
 // Pridėti rating lauką prie komentarų formos
 function add_rating_to_comment_form() {
@@ -348,6 +359,48 @@ function add_rating_to_comment_form() {
 }
 add_action('comment_form_logged_in_after', 'add_rating_to_comment_form');
 add_action('comment_form_after_fields', 'add_rating_to_comment_form');
+add_filter('comment_form_defaults', 'customize_comment_form_texts');
+add_filter('comment_form_defaults', 'customize_comment_form_texts');
+function customize_comment_form_texts($defaults) {
+    $user = wp_get_current_user();
+    
+    if ($user->exists()) {
+        $defaults['logged_in_as'] = '';
+    }
+    
+    return $defaults;
+}
+add_filter('comment_form_defaults', 'customize_comment_form_texts_lt');
+function customize_comment_form_texts_lt($defaults) {
+    $user = wp_get_current_user();
+
+    // Komentarų formos tekstai
+    $defaults['title_reply'] = 'Palikite komentarą';
+    $defaults['label_submit'] = 'Pateikti komentarą';
+    $defaults['comment_field'] = '<p class="comment-form-comment">
+        <label for="comment">Komentaras *</label>
+        <textarea id="comment" name="comment" cols="45" rows="8" required></textarea>
+    </p>';
+
+    return $defaults;
+}
+add_filter('gettext', 'translate_comment_buttons_lt', 20, 3);
+function translate_comment_buttons_lt($translated_text, $text, $domain) {
+    switch ($translated_text) {
+        case 'Save':
+            return 'Išsaugoti';
+        case 'Cancel':
+            return 'Atšaukti';
+        case 'Delete':
+            return 'Ištrinti';
+        case 'Click to edit':
+            return 'Spauskite norėdami redaguoti';
+        case 'You have already left feedback on this sample.':
+            return 'Jūs jau parašėte atsiliepimą prie šio fragmento.';
+        default:
+            return $translated_text;
+    }
+}
 
 // Išsaugoti rating kai komentaras sukuriamas
 function save_comment_rating($comment_id) {
@@ -598,16 +651,3 @@ function handle_profile_edit_form() {
 
 }
 add_action('template_redirect', 'handle_profile_edit_form');
-
-if (isset($_POST['password'])) {
-    $password = $_POST['password'];
-
-    $strongEnough = strlen($password) >= 8 &&
-                    preg_match('/[A-Z]/', $password) &&
-                    preg_match('/[a-z]/', $password) &&
-                    preg_match('/[0-9]/', $password);
-
-    if (!$strongEnough) {
-        $errors[] = 'Slaptažodis per silpnas. Jis turi būti bent 8 simbolių ilgio, turėti didžiųjų ir mažųjų raidžių bei bent vieną skaičių.';
-    }
-}

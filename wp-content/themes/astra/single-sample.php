@@ -25,7 +25,6 @@ if (have_posts()) :
 
     <div class="sample-right">
         <h1 class="sample-title sample-fade-in delay-2"><?php the_title(); ?></h1>
-
 		
         <div class="sample-audio-block sample-fade-in delay-3">
             <h3>Klausykitės fragmento:</h3>
@@ -39,6 +38,16 @@ if (have_posts()) :
             }
             ?>
         </div>
+        <?php
+$genres = get_the_terms(get_the_ID(), 'sample_genre');
+if ($genres && !is_wp_error($genres)) {
+    echo '<div class="sample-genres sample-fade-in delay-2">';
+    echo '<strong>Žanras: </strong>';
+    $genre_names = wp_list_pluck($genres, 'name');
+    echo implode(', ', $genre_names);
+    echo '</div>';
+}
+?>
         <?php if (!empty($audio_file_url)) : ?>
     <div class="sample-download-block sample-fade-in delay-4">
         <a href="<?php echo esc_url($audio_file_url); ?>"
@@ -84,6 +93,7 @@ if (have_posts()) :
 </div>
 
 		<div class="sample-description sample-fade-in delay-2">
+            <h4>Aprašymas</h4>
         	<?php the_content(); ?>
     	</div>
 		<?php
