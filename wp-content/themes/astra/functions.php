@@ -598,3 +598,16 @@ function handle_profile_edit_form() {
 
 }
 add_action('template_redirect', 'handle_profile_edit_form');
+
+if (isset($_POST['password'])) {
+    $password = $_POST['password'];
+
+    $strongEnough = strlen($password) >= 8 &&
+                    preg_match('/[A-Z]/', $password) &&
+                    preg_match('/[a-z]/', $password) &&
+                    preg_match('/[0-9]/', $password);
+
+    if (!$strongEnough) {
+        $errors[] = 'Slaptažodis per silpnas. Jis turi būti bent 8 simbolių ilgio, turėti didžiųjų ir mažųjų raidžių bei bent vieną skaičių.';
+    }
+}
