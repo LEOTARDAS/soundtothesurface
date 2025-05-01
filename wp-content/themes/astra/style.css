@@ -172,3 +172,69 @@
     font-size: 14px;
     color: #444;
 }
+
+.account-menu-wrapper {
+    position: absolute;
+    top: 0;
+    right: 30px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.account-menu {
+    display: flex;
+    gap: 20px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.account-menu li a {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.account-menu li a:hover {
+    text-decoration: underline;
+}
+.profile-logout-btn {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-decoration: none;
+    margin-top: 5px;
+}
+.profile-logout-btn:hover {
+    background: #222;
+}
+.sample-archive-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+}
+
+.sample-card1 {
+	background: white;
+	padding: 20px;
+	border-radius: 10px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	width: calc(33.333% - 60px);
+	box-sizing: border-box;
+}
+
+.sample-card1 h3 {
+	margin-top: 10px;
+	font-size: 1.2em;
+}
+.sample-card1 img {
+    width: 300px;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}

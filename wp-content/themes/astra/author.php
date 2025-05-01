@@ -15,10 +15,19 @@ $author = get_queried_object();
                 }
             ?>
             <div class="author-meta">
-                <h1><?php echo esc_html($author->display_name); ?></h1>
+            <h1>
+    <?php
+        $first = get_user_meta($author->ID, 'first_name', true);
+        $last  = get_user_meta($author->ID, 'last_name', true);
+        echo esc_html(trim($first . ' ' . $last)) ?: esc_html($author->display_name);
+    ?>
+</h1>
                 <?php if (get_current_user_id() === $author->ID) : ?>
-                    <a href="/redaguoti-profili/" class="profile-edit-btn">Redaguoti profilį</a>
+                    <a href="http://localhost:8080/soundtothesurface/redaguoti-profili/" class="profile-edit-btn">Redaguoti profilį</a>
+                    <a href="<?php echo esc_url(wp_logout_url(home_url())); ?>" class="profile-logout-btn">Atsijungti</a>
                 <?php endif; ?>
+
+                
             </div>
         </div>
         <p><strong>Aprašymas:</strong> <?php echo esc_html(get_the_author_meta('description', $author->ID)); ?></p>

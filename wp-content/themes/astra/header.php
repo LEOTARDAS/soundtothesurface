@@ -28,6 +28,7 @@ if ( apply_filters( 'astra_header_profile_gmpg_link', true ) ) {
 	<?php
 }
 ?>
+
 <?php wp_head(); ?>
 <?php astra_head_bottom(); ?>
 </head>
@@ -60,9 +61,7 @@ if ( apply_filters( 'astra_header_profile_gmpg_link', true ) ) {
 	astra_header_before();
 
 	astra_header();
-
 	astra_header_after();
-
 	astra_content_before();
 	?>
 	<div id="content" class="site-content">

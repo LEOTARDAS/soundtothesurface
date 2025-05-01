@@ -658,3 +658,4 @@ function custom_frontpage_styles() {
     }
 }
 add_action('wp_enqueue_scripts', 'custom_frontpage_styles');
+
