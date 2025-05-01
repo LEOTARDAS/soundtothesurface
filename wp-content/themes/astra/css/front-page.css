@@ -1,0 +1,47 @@
+.hero-header {
+    width: 100%;
+    height: 50vh;
+    background-image: url('http://localhost:8080/soundtothesurface/wp-content/uploads/2025/04/header-scaled.jpg'); /* tavo paveikslėlis */
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.overlay {
+    background-color: rgba(204, 0, 0, 0.1);
+    padding: 3rem;
+    color: white;
+    text-align: center;
+    height: 50vh;
+    width: 100%;
+}
+
+.search-bar form {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.search-bar input[type="search"] {
+    width: 60vw;
+    max-width: 800px;
+    padding: 14px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 25px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    outline: none;
+    height: 90px;
+}
+.hero-header h1 {
+    background: white;
+    display: inline-block;
+    padding: 16px 32px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 2.5rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}

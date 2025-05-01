@@ -651,3 +651,10 @@ function handle_profile_edit_form() {
 
 }
 add_action('template_redirect', 'handle_profile_edit_form');
+
+function custom_frontpage_styles() {
+    if (is_front_page()) {
+        wp_enqueue_style('custom-front-style', get_template_directory_uri() . '/css/front-page.css');
+    }
+}
+add_action('wp_enqueue_scripts', 'custom_frontpage_styles');
