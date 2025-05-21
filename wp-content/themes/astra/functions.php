@@ -659,3 +659,13 @@ function custom_frontpage_styles() {
 }
 add_action('wp_enqueue_scripts', 'custom_frontpage_styles');
 
+function allow_audio_file_types($mime_types) {
+    $mime_types['wav'] = 'audio/wav';
+    $mime_types['mp3'] = 'audio/mpeg';
+    return $mime_types;
+}
+add_filter('upload_mimes', 'allow_audio_file_types');
+
+add_filter('show_admin_bar', function() {
+    return current_user_can('administrator');
+});

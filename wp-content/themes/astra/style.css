@@ -238,3 +238,76 @@
     border-radius: 10px;
     margin-bottom: 10px;
 }
+.upload-wrapper {
+    max-width: 1000px;
+    margin: 40px auto;
+    background: #fff;
+    padding: 50px 60px;
+    border-radius: 16px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Formos antraštė */
+.upload-wrapper h2 {
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 30px;
+}
+
+/* Kiekvienas laukas */
+.sample-upload-form .form-group {
+    margin-bottom: 25px;
+}
+
+/* Label stilius */
+.sample-upload-form label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+/* Tekstiniai ir failų įkėlimo laukeliai */
+.sample-upload-form input[type="text"],
+.sample-upload-form textarea,
+.sample-upload-form select,
+.sample-upload-form input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+/* Tekstinė sritis */
+.sample-upload-form textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Peržiūros paveikslėlis */
+#thumbnail-preview {
+    max-width: 250px;
+    margin-top: 10px;
+    display: none;
+    border-radius: 10px;
+}
+
+/* Submit mygtukas */
+.sample-upload-form input[type="submit"] {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 14px 20px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: 100%;
+}
+
+.sample-upload-form input[type="submit"]:hover {
+    background: #222;
+}
