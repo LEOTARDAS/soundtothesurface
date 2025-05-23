@@ -360,7 +360,6 @@ function add_rating_to_comment_form() {
 add_action('comment_form_logged_in_after', 'add_rating_to_comment_form');
 add_action('comment_form_after_fields', 'add_rating_to_comment_form');
 add_filter('comment_form_defaults', 'customize_comment_form_texts');
-add_filter('comment_form_defaults', 'customize_comment_form_texts');
 function customize_comment_form_texts($defaults) {
     $user = wp_get_current_user();
     
@@ -462,18 +461,21 @@ add_action('wp_footer', function () {
 
     ?>
     <script>
-    document.querySelectorAll('select[name="rating"]').forEach(function(select) {
-    const commentForm = select.closest('li.comment, .comment'); // Ieškome artimiausio komentaro
-    if (commentForm) {
-        const rating = commentForm.getAttribute('data-rating');
-        if (rating) {
-            select.value = rating;
-        }
-    }
-});
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('select[name="rating"]').forEach(function(select) {
+            const commentForm = select.closest('li.comment, .comment');
+            if (commentForm) {
+                const rating = commentForm.getAttribute('data-rating');
+                if (rating) {
+                    select.value = rating;
+                }
+            }
+        });
+    });
     </script>
     <?php
 });
+
 
 add_filter('comment_edit_pre', function($comment_content) {
     if (is_admin()) return $comment_content;
@@ -669,3 +671,193 @@ add_filter('upload_mimes', 'allow_audio_file_types');
 add_filter('show_admin_bar', function() {
     return current_user_can('administrator');
 });
+
+add_action('wp_ajax_filter_samples_by_genre', 'filter_samples_by_genre');
+add_action('wp_ajax_nopriv_filter_samples_by_genre', 'filter_samples_by_genre');
+
+function filter_samples_by_genre() {
+    $genre = isset($_POST['genre']) ? sanitize_text_field($_POST['genre']) : '';
+
+    $args = [
+        'post_type' => 'sample',
+        'posts_per_page' => -1,
+    ];
+
+    if (!empty($genre)) {
+        $args['tax_query'] = [[
+            'taxonomy' => 'sample_genre',
+            'field' => 'slug',
+            'terms' => $genre
+        ]];
+    }
+
+    $query = new WP_Query($args);
+
+    if ($query->have_posts()) :
+        while ($query->have_posts()) : $query->the_post();
+            $audio_url = get_post_meta(get_the_ID(), '_sample_audio_file', true);
+            ?>
+            <div class="sample-card">
+                <a href="<?php the_permalink(); ?>">
+                    <div class="sample-image-placeholder">
+                        <?php
+                        $thumbnail_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+                        if ($thumbnail_url) {
+                            echo '<img src="' . esc_url($thumbnail_url) . '" alt="Fragmento paveikslėlis">';
+                        } else {
+                            echo '<div class="sample-default-image"><span>🎵</span></div>';
+                        }
+                        ?>
+                    </div>
+                </a>
+                <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+                <?php if ($audio_url): ?>
+                    <audio controls>
+                        <source src="<?php echo esc_url($audio_url); ?>" type="audio/mpeg">
+                    </audio>
+                <?php endif; ?>
+            </div>
+            <?php
+        endwhile;
+        wp_reset_postdata();
+    else :
+        echo '<p>Nėra fragmentų šiam žanrui.</p>';
+    endif;
+
+    wp_die();
+}
+function include_custom_style_for_edit_fragment() {
+    if (is_page('redaguoti-fragmenta')) {
+        wp_enqueue_style('custom-style', get_stylesheet_uri()); // tai yra style.css
+    }
+}
+add_action('wp_enqueue_scripts', 'include_custom_style_for_edit_fragment');
+
+
+
+function handle_sample_update_redirect() {
+    if (
+        is_page('redaguoti-fragmenta') &&
+        isset($_POST['edit_sample_nonce']) &&
+        wp_verify_nonce($_POST['edit_sample_nonce'], 'edit_sample') &&
+        isset($_GET['fragment_id'])
+    ) {
+        $fragment_id = intval($_GET['fragment_id']);
+        $post = get_post($fragment_id);
+
+        if (
+            $post &&
+            $post->post_type === 'sample' &&
+            $post->post_author == get_current_user_id()
+        ) {
+            $new_title = sanitize_text_field($_POST['sample_title']);
+            $new_content = sanitize_textarea_field($_POST['sample_description']);
+            $new_genre = intval($_POST['sample_genre']);
+
+            wp_update_post([
+                'ID' => $fragment_id,
+                'post_title' => $new_title,
+                'post_content' => $new_content
+            ]);
+
+            wp_set_post_terms($fragment_id, [$new_genre], 'sample_genre', false);
+
+            wp_redirect(get_author_posts_url(get_current_user_id()));
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'handle_sample_update_redirect');
+
+function redaguoti_fragmenta_shortcode() {
+    if (!is_user_logged_in()) {
+        return '<p>Turite būti prisijungęs, kad galėtumėte redaguoti fragmentą.</p>';
+    }
+
+    if (!isset($_GET['fragment_id']) || !get_post($_GET['fragment_id'])) {
+        return '<p>Nurodytas fragmentas nerastas.</p>';
+    }
+
+    $fragment_id = intval($_GET['fragment_id']);
+    $post = get_post($fragment_id);
+
+    if ($post->post_type !== 'sample') {
+        return '<p>Netinkamas fragmentas.</p>';
+    }
+
+    if ($post->post_author != get_current_user_id()) {
+        return '<p>Neturite teisės redaguoti šio fragmento.</p>';
+    }
+
+    $current_title = esc_attr($post->post_title);
+    $current_content = esc_textarea($post->post_content);
+    $current_terms = wp_get_post_terms($fragment_id, 'sample_genre');
+    $current_term_id = $current_terms && !is_wp_error($current_terms) ? $current_terms[0]->term_id : 0;
+
+    ob_start(); ?>
+     <h2 style="text-align: center; margin-top: 40px;">Fragmento redagavimas</h2>
+    <form method="post" style="display:flex; flex-direction:column; gap:15px; max-width:600px; margin:30px auto;">
+        <?php wp_nonce_field('edit_sample', 'edit_sample_nonce'); ?>
+
+        <label>Pavadinimas</label>
+        <input type="text" name="sample_title" value="<?php echo $current_title; ?>" required>
+
+        <label>Aprašymas</label>
+        <textarea name="sample_description" rows="5"><?php echo $current_content; ?></textarea>
+
+        <label>Žanras</label>
+        <select name="sample_genre">
+            <option value="">– Pasirinkite žanrą –</option>
+            <?php
+            $genres = get_terms([
+                'taxonomy' => 'sample_genre',
+                'hide_empty' => false
+            ]);
+            foreach ($genres as $genre) {
+                echo '<option value="' . esc_attr($genre->term_id) . '" ' . selected($current_term_id, $genre->term_id, false) . '>' . esc_html($genre->name) . '</option>';
+            }
+            ?>
+        </select>
+
+        <input type="submit" name="update_sample" value="Išsaugoti" style="background: #0073aa; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor:pointer;">
+    </form>
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('redaguoti_fragmenta', 'redaguoti_fragmenta_shortcode');
+add_action('wp_footer', function () {
+    if (!is_singular('sample')) return;
+    ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ratingLabels = document.querySelectorAll('.comment-form-rating label');
+
+        ratingLabels.forEach(function (label) {
+            const next = label.nextSibling;
+
+            // Pašalina viską tarp <label> ir <select> jeigu tai tekstinis mazgas
+            if (next && next.nodeType === Node.TEXT_NODE && next.textContent.trim().match(/^\d+$/)) {
+                next.remove();
+            }
+
+            // Papildomai pašalina span'us jei yra (jei įskiepis tokius kuria)
+            const spans = label.parentElement.querySelectorAll('span');
+            spans.forEach(span => span.remove());
+        });
+    });
+    </script>
+    <?php
+});
+add_filter('comment_edit_pre', function($content) {
+    if (is_singular('sample')) {
+        return $content . '<p style="color:red; font-weight:bold;">(Įvertinimai negali būti redaguojami)</p>';
+    }
+    return $content;
+});
+
+add_filter('comment_edit_allowed', function($allowed, $comment) {
+    if (is_singular('sample')) {
+        return false;
+    }
+    return $allowed;
+}, 10, 2);

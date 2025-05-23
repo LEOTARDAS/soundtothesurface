@@ -25,7 +25,26 @@ if (have_posts()) :
 
     <div class="sample-right">
         <h1 class="sample-title sample-fade-in delay-2"><?php the_title(); ?></h1>
-		
+		<?php
+            // AUTORIAUS INFORMACIJA + PARAMOS MYGTUKAS
+$author_id = get_the_author_meta('ID');
+$author_name = get_the_author_meta('display_name');
+$profile_url = get_author_posts_url($author_id);
+$support_url = site_url('/remti?user_id=' . $author_id);
+?>
+<div class="sample-author-box sample-fade-in delay-2" style="margin-top: 10px; margin-bottom: 20px;">
+    <p class="sample-author-line">
+        <strong>Įkėlė:</strong> 
+        <a class="sample-author-name" href="<?php echo esc_url($profile_url); ?>">
+            <?php echo esc_html($author_name); ?>
+        </a>
+    </p>
+
+    <?php if (get_current_user_id() !== $author_id) : ?>
+        <a href="<?php echo esc_url($support_url); ?>" class="support-btn" style="background:#0073aa; color:white; padding:8px 16px; border-radius:6px; text-decoration:none;">Remti autorių</a>
+    <?php endif; ?>
+</div>
+
         <div class="sample-audio-block sample-fade-in delay-3">
             <h3>Klausykitės fragmento:</h3>
             <?php
@@ -55,7 +74,7 @@ if ($genres && !is_wp_error($genres)) {
            class="download-button"
            onclick="registerDownload(<?php echo get_the_ID(); ?>)">
             <img src="http://localhost:8080/soundtothesurface/wp-content/uploads/2025/04/download-icon.png" alt="Download" style="width: 20px; height: 20px;">
-            Download
+            Atsisiųsti
         </a>
         <p id="download-count" style="margin-top:10px;">Atsisiuntimų skaičius: <strong><?php echo $download_count; ?></strong></p>
     </div>

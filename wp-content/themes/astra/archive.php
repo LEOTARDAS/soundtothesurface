@@ -25,11 +25,23 @@ get_header(); ?>
 		<div class="sample-archive-grid">
 			<?php while ( have_posts() ) : the_post(); ?>
 				<div class="sample-card1">
-					<?php if ( has_post_thumbnail() ) : ?>
-						<a href="<?php the_permalink(); ?>">
-							<?php the_post_thumbnail( 'medium' ); ?>
-						</a>
-					<?php endif; ?>
+					<div class="sample-image-placeholder">
+    <?php
+    $thumbnail_url = get_the_post_thumbnail_url(get_the_ID(), 'medium');
+    if ($thumbnail_url) {
+        echo '<img src="' . esc_url($thumbnail_url) . '" alt="Fragmento paveikslėlis" class="sample-image">';
+    } else {
+        $default_img = wp_get_attachment_url(64); // <- ID tavo bazinės miniatiūros
+        if ($default_img) {
+            echo '<img src="' . esc_url($default_img) . '" alt="Numatytoji miniatiūra" class="sample-image">';
+        } else {
+            echo '<div class="sample-default-image">';
+            echo '<span style="font-size:80px;">🎵</span>';
+            echo '</div>';
+        }
+    }
+    ?>
+</div>
 
 					<h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
 					<p><?php the_excerpt(); ?></p>
